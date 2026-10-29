@@ -3,8 +3,12 @@
 from flask import request, session
 from flask_restful import Resource
 
-from config import app, db, api
-from models import User, UserSchema
+try:
+    from config import app, db, api
+    from models import User, UserSchema
+except ModuleNotFoundError:
+    from server.config import app, db, api
+    from server.models import User, UserSchema
 
 class ClearSession(Resource):
 
@@ -22,6 +26,7 @@ class Signup(Resource):
         user = User(
             username=json['username']
         )
+        user.password_hash = json['password']
         db.session.add(user)
         db.session.commit()
         return UserSchema().dump(user), 201
@@ -45,7 +50,7 @@ class Login(Resource):
 
         user = User.query.filter(User.username == username).first()
 
-        if user:
+        if user and user.authenticate(password):
             session['user_id'] = user.id
             return UserSchema().dump(user), 200
 
